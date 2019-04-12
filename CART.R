@@ -25,7 +25,11 @@ cart <- function(dat) {
 }
 
 cart_all <-
-  tibble(p = seq(5, 500, 10)) %>%
+  tibble(
+    p = seq(10, 1e3, 1e2),
+    n = seq(10, 1e3, 1e2)
+  ) %>%
+  expand(n, p) %>%
   mutate(
     data  = suppressMessages(future_map(p, rdata)),
     cart  = map(data, cart),
@@ -34,5 +38,18 @@ cart_all <-
 
 for (i in 1:nrow(cart_all)) {
   plotcp(cart_all[i,]$cart[[1]])
-  title(paste(cart_all[[1]][i], "parameters"), line = -2)
+  title(paste("n = ", cart_all[[2]][i], "p = ", cart_all[[1]][i]), line = -2)
 }
+
+all_MSE = rep(0, nrow(cart_all))
+for (i in 1:nrow(cart_all)) {
+  rtree <- cart_all[i,]$cart[[1]]
+  X <- cart_all$data[[i]][,-1]
+  Y <- cart_all$data[[i]][1]
+  Y_Hat <- predict(rtree, X)
+  MSE <- sum((Y-Y_Hat)^2)
+  all_MSE[i] = MSE
+}
+
+plot(unlist(cart_all[,1]), all_MSE)
+lines(unlist(cart_all[,1]), all_MSE)
